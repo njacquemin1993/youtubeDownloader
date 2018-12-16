@@ -8,11 +8,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.SparseArray;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import at.huber.youtubeExtractor.VideoMeta;
@@ -23,16 +18,9 @@ public class SampleDownloadActivity extends Activity {
 
     private static String youtubeLink;
 
-    private LinearLayout mainLayout;
-    private ProgressBar mainProgressBar;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        setContentView(R.layout.activity_sample_download);
-        mainLayout = (LinearLayout) findViewById(R.id.main_layout);
-        mainProgressBar = (ProgressBar) findViewById(R.id.prgrBar);
 
         // Check how it was started and if we can get the youtube link
         if (savedInstanceState == null && Intent.ACTION_SEND.equals(getIntent().getAction())
@@ -61,7 +49,6 @@ public class SampleDownloadActivity extends Activity {
 
             @Override
             public void onExtractionComplete(SparseArray<YtFile> ytFiles, VideoMeta vMeta) {
-                mainProgressBar.setVisibility(View.GONE);
 
                 if (ytFiles == null) {
                     // Something went wrong we got no urls. Always check this.
@@ -75,38 +62,20 @@ public class SampleDownloadActivity extends Activity {
                     YtFile ytFile = ytFiles.get(itag);
 
                     // Just add videos in a decent format => height -1 = audio
-                    if (ytFile.getFormat().getHeight() == -1 || ytFile.getFormat().getHeight() >= 360) {
-                        addButtonToMainLayout(vMeta.getTitle(), ytFile);
+                    if (ytFile.getFormat().getHeight() == -1) {
+                        String videoTitle = vMeta.getTitle();
+                        String filename;
+                        if (videoTitle.length() > 55) {
+                            filename = videoTitle.substring(0, 55) + "." + ytFile.getFormat().getExt();
+                        } else {
+                            filename = videoTitle + "." + ytFile.getFormat().getExt();
+                        }
+                        filename = filename.replaceAll("[\\\\><\"|*?%:#/]", "");
+                        downloadFromUrl(ytFile.getUrl(), videoTitle, filename);
                     }
                 }
             }
         }.extract(youtubeLink, true, false);
-    }
-
-    private void addButtonToMainLayout(final String videoTitle, final YtFile ytfile) {
-        // Display some buttons and let the user choose the format
-        String btnText = (ytfile.getFormat().getHeight() == -1) ? "Audio " +
-                ytfile.getFormat().getAudioBitrate() + " kbit/s" :
-                ytfile.getFormat().getHeight() + "p";
-        btnText += (ytfile.getFormat().isDashContainer()) ? " dash" : "";
-        Button btn = new Button(this);
-        btn.setText(btnText);
-        btn.setOnClickListener(new OnClickListener() {
-
-            @Override
-            public void onClick(View v) {
-                String filename;
-                if (videoTitle.length() > 55) {
-                    filename = videoTitle.substring(0, 55) + "." + ytfile.getFormat().getExt();
-                } else {
-                    filename = videoTitle + "." + ytfile.getFormat().getExt();
-                }
-                filename = filename.replaceAll("[\\\\><\"|*?%:#/]", "");
-                downloadFromUrl(ytfile.getUrl(), videoTitle, filename);
-                finish();
-            }
-        });
-        mainLayout.addView(btn);
     }
 
     private void downloadFromUrl(String youtubeDlUrl, String downloadTitle, String fileName) {
